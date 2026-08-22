@@ -848,6 +848,455 @@ Spark is best thought of as a distributed compute platform for:
 
 ---
 
+## Q: What is the DAG scheduler in Spark?
+
+The DAG scheduler is the component in Spark that plans how a job should execute across the cluster.
+
+### Main idea
+
+Spark converts each job into a Directed Acyclic Graph (DAG) of stages and tasks.
+
+- each transformation creates a node in the graph
+- dependencies between transformations are tracked
+- Spark figures out which tasks can run in parallel
+- tasks are grouped into stages based on shuffle boundaries
+
+### Why it matters
+
+The DAG scheduler is important because it decides:
+
+- the order of execution
+- which tasks can run together
+- where to place work across cluster nodes
+- how to minimize unnecessary data movement
+
+### Simple idea
+
+```text
+User code
+  ↓
+Spark transformations
+  ↓
+DAG scheduler
+  ↓
+Stages / tasks
+  ↓
+Cluster execution
+```
+
+### Best short answer:
+
+"The DAG scheduler in Spark is the component that converts a user program into a DAG of stages and tasks and decides how to execute them efficiently across the cluster."
+
+---
+
+## Q: What is a narrow dependency in Spark?
+
+A narrow dependency means each partition of the parent dataset is used by at most one partition of the child dataset.
+
+### Key idea
+
+A narrow dependency does not require a shuffle.
+
+This is important because Spark can execute these operations more efficiently and keep data locally available.
+
+### Typical narrow dependency examples
+
+- `map`
+- `filter`
+- `flatMap`
+- `select`
+- `dropDuplicates` in some cases
+
+### Example 1: map
+
+```python
+rdd = sc.parallelize([1, 2, 3, 4])
+rdd2 = rdd.map(lambda x: x * 2)
+```
+
+One input partition produces one output partition, without redistributing data.
+
+```text
+input partitions:   [p1][p2][p3][p4]
+                    │   │   │   │
+                    ▼   ▼   ▼   ▼
+output partitions:  [q1][q2][q3][q4]
+```
+
+### Example 2: filter
+
+```python
+rdd3 = rdd2.filter(lambda x: x > 5)
+```
+
+Each input partition can be filtered independently without mixing data from other partitions.
+
+### Example 3: `mapPartitions`
+
+```python
+rdd4 = rdd.mapPartitions(lambda partition: [x * 10 for x in partition])
+```
+
+Each partition of the input is processed independently and mapped to its own output partition.
+
+### Why this matters
+
+Narrow dependencies allow Spark to:
+
+- keep work local
+- avoid heavy data movement
+- reduce shuffle cost
+- create efficient stage pipelines
+
+### Narrow vs wide dependency
+
+- **Narrow**: one input partition produces at most one output partition
+- **Wide**: data from many partitions must be combined, often by a shuffle
+
+### Example of wide dependency
+
+```python
+rdd5 = rdd4.groupByKey()
+```
+
+Here, multiple input partitions may need to contribute to the same output key group, so Spark must shuffle data across the cluster.
+
+### Best short answer:
+
+"A narrow dependency in Spark means each input partition contributes to only one output partition, so the operation can usually run without a shuffle and is more efficient than a wide dependency."
+
+---
+
+## Q: What is network shuffle?
+
+A network shuffle is the process where Spark redistributes data across the cluster because different partitions need to be grouped together for the next operation.
+
+### Why it happens
+
+Shuffle is needed when a transformation requires data with the same key to land on the same worker or partition. Examples include:
+
+- `groupByKey()`
+- `reduceByKey()`
+- `join()`
+- `sortByKey()`
+- `distinct()`
+
+These operations are usually wide dependencies, not narrow ones.
+
+### Simple idea
+
+```text
+Before shuffle:
+partition 1 -> [A, B, C]
+partition 2 -> [B, D]
+partition 3 -> [A, E]
+
+After shuffle by key:
+key A -> worker/node 1
+key B -> worker/node 2
+key C -> worker/node 3
+key D -> worker/node 2
+key E -> worker/node 1
+```
+
+All records with the same key are moved to the same place so the next step can aggregate or join them correctly.
+
+### What is expensive about shuffle?
+
+A shuffle is usually expensive because it involves:
+
+- writing intermediate data to local disk
+- serializing and transferring data over the network
+- reading the data again on the receiving side
+- creating stage boundaries and synchronization points
+
+This is why shuffle is considered one of the biggest performance costs in distributed processing.
+
+### Example
+
+```python
+rdd = sc.parallelize([("A", 1), ("B", 2), ("A", 3), ("C", 4)])
+rdd2 = rdd.reduceByKey(lambda x, y: x + y)
+```
+
+Spark must shuffle records so all `"A"` values are grouped together and summed, then all `"B"` values and `"C"` values are grouped similarly.
+
+### Short answer
+
+"Network shuffle is the process of moving data between cluster nodes so records with the same key end up together for aggregation or join operations; it is powerful but expensive because it uses disk and network bandwidth."
+
+---
+
+## Q: What is Py4J?
+
+Py4J is the library that enables Python to communicate with the JVM in Apache Spark.
+
+### Main idea
+
+Spark itself runs on the Java Virtual Machine (JVM), but PySpark lets Python code call Spark APIs and execute work on the JVM runtime.
+
+Py4J acts as the bridge between:
+
+- Python code
+- Spark Java/Scala runtime
+- JVM objects and Spark executors
+
+### Why Py4J matters
+
+Without Py4J, Python code could not easily call Java classes and Spark internals. Py4J allows:
+
+- Python to create and manipulate Spark JVM objects
+- Spark to expose Java APIs to Python
+- communication between Python driver code and the JVM-backed Spark engine
+
+### Simple example
+
+When you run:
+
+```python
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName("demo").getOrCreate()
+```
+
+Python code is creating objects that are backed by the JVM. Py4J is the mechanism that makes that communication possible.
+
+### Important point
+
+Py4J is not Spark itself. It is the connection layer that lets Python talk to the JVM-based Spark engine.
+
+### Best short answer:
+
+"Py4J is the bridge that lets Python code communicate with Spark's JVM runtime, allowing PySpark to call Java/Scala-based Spark APIs and execute jobs on the Spark cluster."
+
+---
+
+## Q: Does Py4J solve Python slowness in Spark?
+
+No. Py4J solves the communication problem between Python and the JVM, but it does not make Python execution fast.
+
+### What Py4J does
+
+- lets Python call Spark's JVM-based APIs
+- lets Python objects and JVM objects interact
+- enables PySpark to work on top of Spark's Java/Scala engine
+
+### What Py4J does not do
+
+- it does not remove Python serialization cost
+- it does not eliminate object overhead
+- it does not speed up Python UDFs
+- it does not remove shuffle cost in Python-heavy workloads
+
+### Why Python can still be slower
+
+Even with Py4J, Python data may need to be:
+
+- serialized before crossing the Python-JVM boundary
+- deserialized when processed by the JVM layer
+- moved across network and disk during shuffle
+
+This adds CPU, memory, and I/O overhead compared to native JVM code.
+
+### Best short answer:
+
+"Py4J enables Python to talk to Spark's JVM runtime, but it does not make Python fast; it only creates the connection, and performance still depends on serialization, data movement, and whether you use native Spark operations or Python UDFs."
+
+---
+
+## Q: What is the relationship between Py4J, JVM, and PySpark?
+
+This is the easiest way to remember it:
+
+- **Spark runs on the JVM**: Spark engine is built on Java/Scala and runs inside the Java Virtual Machine.
+- **PySpark is the Python API**: it gives Python users a way to write Spark code.
+- **Py4J is the bridge**: it allows Python code to talk to JVM objects and Spark internals.
+
+### Simple memory line
+
+"PySpark is Python access to Spark, and Py4J is the bridge that connects Python with the JVM-based Spark runtime."
+
+---
+
+## Q: Why do Scala and Python code in Spark have different shuffle size and time?
+
+The main reason is that Spark executes Scala code natively on the JVM, while Python code in PySpark runs through Python worker processes and requires serialization and deserialization.
+
+### Key idea
+
+Even if both programs do the same logical work, they do not have the same runtime cost.
+
+### In Scala
+
+- Spark code runs in the JVM runtime
+- data is kept in JVM-native structures
+- less serialization overhead
+- less memory overhead per record
+- faster execution for large distributed operations
+
+### In Python (PySpark)
+
+- Python objects must be serialized before being shuffled
+- data is sent between executors in pickled form
+- it must be deserialized on the receiving side
+- extra CPU and memory are used for object conversion
+- Python worker boundaries add more overhead
+
+### Why shuffle gets bigger and slower
+
+When a Python job performs a shuffle-heavy operation such as:
+
+- `groupByKey()`
+- `reduceByKey()`
+- `join()`
+- `sortByKey()`
+
+Spark has to move more serialized data across the network. That increases:
+
+- network traffic
+- disk I/O during spill/write
+- CPU used for serialization and deserialization
+- overall shuffle time
+
+### UDFs make it worse
+
+If you use Python UDFs or row-wise Python logic, Spark often cannot do the full operation in native optimized code. It has to move data in and out of Python workers, which increases cost even more.
+
+### Example
+
+```python
+# Python version
+rdd = sc.parallelize([("A", 1), ("B", 2), ("A", 3)])
+result = rdd.groupByKey().mapValues(list)
+```
+
+This may shuffle more data and take longer than an equivalent Scala or SQL/DataFrame operation because Python objects are heavier and must cross the Python boundary.
+
+### Best short answer:
+
+"Scala and Python code in Spark differ in shuffle size and time because Scala runs natively on the JVM with lower serialization overhead, while PySpark must serialize Python objects and move them through Python workers, which makes shuffle slower and more expensive."
+
+---
+
+## Q: Why is it necessary to mention the number of executors and number of cores on a cluster from a business perspective?
+
+Because executor and core counts directly tell the business how much parallel compute the system has, and that affects speed, cost, and deadlines.
+
+### Why this matters
+
+#### 1. Performance
+- more executors and cores means more tasks can run in parallel
+- faster job completion for ETL, SQL, and ML workloads
+- slower throughput can delay reports, dashboards, and customer-facing insights
+
+#### 2. Cost
+- each executor and core consumes cluster resources
+- more capacity usually means higher cloud spend
+- the business must balance performance against cost
+
+#### 3. SLA and deadlines
+- if a data pipeline must finish before a fixed time, cluster sizing matters
+- too few resources can make jobs miss service-level goals
+- too many resources can waste money
+
+#### 4. Capacity planning
+- as data volume grows, the business needs to know if more executors or cores are required
+- this helps forecast performance and infrastructure spending
+
+### Simple business view
+
+"Executor count and core count are the main indicators of cluster capacity. They tell us how fast the system can process work and how much it costs to do so."
+
+---
+
+## Q: What is CBO?
+
+CBO stands for Cost-Based Optimizer.
+
+### Main idea
+
+It is the query optimization component that estimates the cost of different execution plans and chooses the lowest-cost one.
+
+### It considers things like
+
+- table sizes
+- row counts
+- indexes
+- join methods
+- filter selectivity
+- partitions and data distribution
+- estimated I/O and CPU cost
+
+### Why it matters
+
+Two queries may look similar, but the optimizer can choose a much faster plan by:
+
+- using an index
+- changing join order
+- selecting hash join instead of nested loop
+- reducing scans
+- filtering early
+
+### CBO vs RBO
+
+- **RBO**: rule-based optimizer, follows fixed rules
+- **CBO**: cost-based optimizer, picks plan based on estimated cost
+
+### Best short answer:
+
+"CBO is the Cost-Based Optimizer, which chooses the most efficient SQL execution plan by estimating costs such as scan size, join strategy, and resource usage."
+
+---
+
+## Q: Why is Spark built in Scala?
+
+Spark is built in Scala because Scala fits the design of distributed data processing very well.
+
+### Main reasons
+
+- Scala runs on the JVM, which makes it compatible with Java ecosystem and high-performance runtime features
+- it supports functional programming, which is useful for immutable transformations and distributed data pipelines
+- it gives a compact but expressive API for data processing
+- it works well for concurrency and large cluster-based workloads
+- it was a natural fit for the original Spark architecture and runtime internals
+
+### Important note
+
+Spark is not limited to Scala. It also supports:
+
+- Python
+- SQL
+- Java
+- R
+
+But Scala remains the native language of Spark, and many low-level optimizations are designed around it.
+
+### Best short answer:
+
+"Spark is built in Scala because Scala runs on the JVM and is well-suited to distributed, functional, high-performance data processing, which matches Spark's design."
+
+---
+
+## Q: Will Scala work without Java?
+
+Usually, no.
+
+### Why
+
+Scala is typically compiled to Java bytecode and runs on the Java Virtual Machine (JVM). That means Java is normally required underneath Scala.
+
+### In practice
+
+- Scala code is not a standalone runtime like Python
+- the JVM is needed to run Scala applications
+- Spark, which is written in Scala, also relies on the JVM
+
+### Best short answer:
+
+"Scala usually runs on the JVM, so Java is still required underneath it; Spark is a good example of this relationship."
+
+---
+
 ## Q: What is MLlib in Spark?
 
 MLlib is Spark's built-in machine learning library.
@@ -881,6 +1330,200 @@ MLlib lets data engineers and data scientists run machine learning at scale usin
 ### Best short answer:
 
 "MLlib is Spark's built-in library for scalable machine learning, including algorithms for classification, regression, clustering, recommendation, and feature engineering."
+
+---
+
+## Q: What is Dask?
+
+Dask is an open-source Python library for parallel and distributed computing.
+
+### Main idea
+
+It helps Python users scale workloads across multiple cores or multiple machines without rewriting all the code.
+
+### Typical use cases
+
+- parallel dataframe processing
+- distributed machine learning
+- ETL and data transformations
+- scientific computing
+- large-scale data analysis in Python
+
+### Why it is useful
+
+Dask provides a familiar Python workflow while allowing computation to run in parallel across a cluster.
+
+### Dask vs Spark
+
+- **Spark**: distributed engine for large-scale data processing in Java/Scala with SQL, streaming, ML, and DataFrames
+- **Dask**: Python-native parallel computing library, especially popular in data science workflows
+
+### Best short answer:
+
+"Dask is a Python-based parallel computing library that lets users scale analysis and data processing across multiple CPUs or machines without leaving the Python ecosystem."
+
+---
+
+## Q: What is the difference between Dask and Spark?
+
+Dask and Spark both help process large datasets in parallel, but they are designed for different ecosystems and workloads.
+
+### Dask
+
+- Python-native
+- commonly used in data science and analytics workflows
+- easy to use with pandas, NumPy, and scikit-learn
+- good for scaling Python workloads across cores or machines
+- often simpler for teams already working in Python
+
+### Spark
+
+- full distributed big-data processing engine
+- built for large-scale production data engineering
+- supports SQL, streaming, MLlib, graph processing, and ETL
+- better for enterprise workloads and cluster-based processing
+- stronger ecosystem for large-scale pipeline orchestration and analytics
+
+### Simple summary
+
+- **Dask** = Python parallel processing for data science and Python workflows
+- **Spark** = big-data engine for enterprise-scale data processing and analytics
+
+### Best short answer:
+
+"Dask is a Python-first parallel computing library, while Spark is a full distributed big-data engine built for enterprise-scale data processing, SQL, streaming, ML, and ETL."
+
+---
+
+## Q: Does Databricks have ML capabilities? Is ML its core competency?
+
+Yes. Databricks has strong ML capabilities, but its main identity is as a unified data platform, not a pure ML-only company.
+
+### What Databricks is known for
+
+- Apache Spark-based distributed data processing
+- data engineering and ETL workflows
+- lakehouse architecture using Delta Lake
+- SQL and BI on large datasets
+- notebook-based collaborative data work
+- MLOps and model lifecycle management
+
+### ML features it offers
+
+- Spark MLlib integration
+- MLflow for experiment tracking and model management
+- notebooks for building and testing models
+- managed infrastructure for ML workloads
+- support for Python, SQL, and model pipelines
+- integration with deep learning frameworks in many setups
+
+### Is ML its core competency?
+
+Not exactly.
+
+Databricks is primarily a data platform for:
+
+- storage
+- lakehouse architecture
+- data engineering
+- analytics
+- large-scale data processing
+
+ML is a major built-in capability on top of that platform, but the platform itself is centered around data and analytics rather than being only an ML product.
+
+### Best short answer:
+
+"Databricks has strong ML capabilities, especially for large-scale, data-centric machine learning and MLOps, but its core competency is the lakehouse/data platform, with ML as a major feature built into that ecosystem."
+
+---
+
+## Q: What is Ray?
+
+Ray is a distributed compute framework for scaling Python workloads and ML/AI tasks across many machines.
+
+### Main idea
+
+Ray helps run Python code in parallel across a cluster, with a focus on distributed execution for AI, ML, and general compute workloads.
+
+### Typical use cases
+
+- distributed training for ML models
+- parallel data processing
+- reinforcement learning
+- model serving
+- large-scale Python workloads
+- hyperparameter tuning
+
+### Why it is useful
+
+Ray is especially useful when you want to scale Python code efficiently without moving everything into a full Spark-based workflow.
+
+### Ray vs Spark
+
+- **Spark**: big-data processing engine with SQL, streaming, ETL, and MLlib
+- **Ray**: general-purpose distributed compute framework, especially strong for Python and AI workloads
+
+### Best short answer:
+
+"Ray is a distributed compute framework for scaling Python, AI, and ML workloads across many machines, often used for distributed training and parallel execution."
+
+---
+
+## Q: Is Ray the underlying engine of Databricks ML offerings?
+
+Not primarily.
+
+### Databricks core foundation
+
+Databricks is mainly built around:
+
+- Apache Spark
+- Delta Lake / lakehouse architecture
+- distributed data processing
+- MLflow for model lifecycle management
+- notebooks and collaborative analytics
+
+### Where Ray fits
+
+Ray can be used in some AI and machine learning scenarios inside Databricks environments, especially when workloads are Python-heavy or need distributed model training. But Ray is not the core foundational engine of Databricks' general platform.
+
+### Best short answer:
+
+"No. Databricks is primarily a Spark-based lakehouse and data platform with ML capabilities. Ray may be used selectively for distributed Python/AI workloads, but it is not the underlying engine of the main Databricks ML offering."
+
+---
+
+## Q: Is Spark the best product in the market for core data lake OLAP?
+
+Spark is one of the strongest and most common products for data lake and lakehouse processing, but not always the best choice for every OLAP workload.
+
+### Where Spark is excellent
+
+- ETL and ELT pipelines
+- processing large lake datasets
+- lakehouse compute using Delta, Iceberg, or Hudi
+- SQL queries over large-scale data
+- distributed ML and analytics workloads
+
+### Where Spark is not always the best
+
+For pure warehouse-style OLAP speed and SQL user experience, other systems may perform better, such as:
+
+- Snowflake
+- BigQuery
+- Redshift
+- Databricks SQL
+- Trino for federated SQL queries
+- ClickHouse for very fast analytical queries
+
+### Best practical view
+
+- **Spark** = excellent for the data lake / lakehouse compute layer
+- **Warehouse-native systems** = often better for highly optimized SQL analytics and BI performance
+
+### Best short answer:
+
+"Spark is one of the best products for lakehouse and data lake compute, but it is not always the absolute best product for all OLAP workloads; warehouse-native systems often win on pure SQL and query performance."
 
 ---
 
