@@ -34,6 +34,14 @@ spark.range(10).count()
 
 Keep the Docker terminal open while working. When finished, press `Ctrl+C` in that terminal to stop the container.
 
+For a one-click start, double-click `15Day_MDE_Share1\start-spark-jupyter.bat` in File Explorer. The batch file checks Docker, pulls the Spark image if it is missing, and starts the same container command. It uses paths relative to its own location, so it does not require the repository to be the current PowerShell directory.
+
+From a terminal, run it with:
+
+```powershell
+& .\15Day_MDE_Share1\start-spark-jupyter.bat
+```
+
 ## 1. Prerequisites
 
 The setup requires:
