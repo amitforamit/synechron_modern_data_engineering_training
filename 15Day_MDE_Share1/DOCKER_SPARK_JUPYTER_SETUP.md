@@ -2,6 +2,38 @@
 
 This guide documents the complete setup used to run the repository's Spark notebooks with Docker Desktop, WSL 2, and JupyterLab.
 
+## Quick Start After Installation
+
+Use these steps each time you want to work with the Spark notebooks:
+
+1. Start Docker Desktop and wait until it reports that the engine is running.
+2. Open PowerShell and move to the repository root:
+
+```powershell
+cd E:\coding_ground\synechron_modern_data_engineering_training
+```
+
+3. Confirm that Docker is available:
+
+```powershell
+docker version
+```
+
+The output must include both `Client` and `Server` sections.
+
+4. Start the container by running the PowerShell command in [DOCKERCOMMAND.txt](DOCKERCOMMAND.txt), or copy the command from section 5 below.
+5. Open the tokenized JupyterLab URL printed in the terminal, usually `http://localhost:8888/lab?token=...`.
+6. Open an existing notebook or create one with the `pyspark4` / `SANATAN Spark Python 4` kernel.
+7. Run a Spark action to initialize Spark:
+
+```python
+spark.range(10).count()
+```
+
+8. Open the Spark UI at [http://localhost:8889](http://localhost:8889).
+
+Keep the Docker terminal open while working. When finished, press `Ctrl+C` in that terminal to stop the container.
+
 ## 1. Prerequisites
 
 The setup requires:
