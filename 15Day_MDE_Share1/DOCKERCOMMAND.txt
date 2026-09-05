@@ -1,2 +1,33 @@
 docker run --user root -e HOME=/tmp -e SPARK_UI_PORT=8889 -p 8888:8888 -p 8889:8889 -v /home/prathamos/Downloads/Share1/jupyterbasedexamples/pyspark_startup.py:/usr/local/share/jupyter/kernels/pyspark4/startup.py -v /home/prathamos/Downloads/Share1/jupyterbasedexamples:/mnt/data minus1by12/sanatan:spark-lakehouse-driver-4.2.0-gravitino-1.3.0 jupyter-lab --ip=0.0.0.0 --port=8888 --notebook-dir=/mnt/data --no-browser --allow-root --ServerApp.disable_check_xsrf=True --LabApp.news_url='' --NotebookNotary.db_file=':memory:'
 
+Windows PowerShell
+===================
+
+Run from the repository root after installing and starting Docker Desktop:
+
+cd E:\coding_ground\synechron_modern_data_engineering_training
+$examples = (Resolve-Path ".\15Day_MDE_Share1\jupyterbasedexamples").Path
+$startup = (Resolve-Path "$examples\pyspark_startup.py").Path
+
+docker run --rm `
+	--user root `
+	-e HOME=/tmp `
+	-e SPARK_UI_PORT=8889 `
+	-p 8888:8888 `
+	-p 8889:8889 `
+	--mount "type=bind,source=$startup,target=/usr/local/share/jupyter/kernels/pyspark4/startup.py,readonly" `
+	--mount "type=bind,source=$examples,target=/mnt/data" `
+	minus1by12/sanatan:spark-lakehouse-driver-4.2.0-gravitino-1.3.0 `
+	jupyter-lab `
+	--ip=0.0.0.0 `
+	--port=8888 `
+	--notebook-dir=/mnt/data `
+	--no-browser `
+	--allow-root `
+	--ServerApp.disable_check_xsrf=True `
+	--LabApp.news_url='' `
+	--NotebookNotary.db_file=':memory:'
+
+Open the JupyterLab URL printed by the container, normally http://localhost:8888/lab?token=....
+Spark UI is available at http://localhost:8889.
+
