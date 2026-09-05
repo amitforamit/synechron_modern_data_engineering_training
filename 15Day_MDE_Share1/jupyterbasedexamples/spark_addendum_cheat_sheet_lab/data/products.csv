@@ -1,0 +1,11 @@
+product_id,product,category,unit_price,brand
+P001,Laptop,Electronics,1200,TechCo
+P002,Phone,Electronics,800,MobilePro
+P003,Desk,Furniture,450,HomeWorks
+P004,Monitor,Electronics,300,ViewMax
+P005,Chair,Furniture,150,HomeWorks
+P006,Tablet,Electronics,650,TechCo
+P007,Lamp,Furniture,90,BrightHome
+P008,Keyboard,Electronics,120,TechCo
+P009,Mouse,Electronics,60,TechCo
+P010,Shelf,Furniture,200,HomeWorks

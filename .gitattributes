@@ -1,0 +1,12 @@
+/15Day_MDE_Share1.zip filter=lfs diff=lfs merge=lfs -text
+/data/DataSet.7z filter=lfs diff=lfs merge=lfs -text
+/data/DataSet/DelayedFlights.csv filter=lfs diff=lfs merge=lfs -text
+/data/DataSet/Sentiment[[:space:]]Analysis[[:space:]]Dataset.csv filter=lfs diff=lfs merge=lfs -text
+/data/DataSet/aadhaar_data.csv filter=lfs diff=lfs merge=lfs -text
+/data/DataSet/allCountries.txt filter=lfs diff=lfs merge=lfs -text
+/data/DataSet/book/BX-Books.csv filter=lfs diff=lfs merge=lfs -text
+/data/DataSet/citylots.json filter=lfs diff=lfs merge=lfs -text
+/data/kfk.7z filter=lfs diff=lfs merge=lfs -text
+/data/kfk/Software/grafana-7.5.7.linux-amd64.tar.gz filter=lfs diff=lfs merge=lfs -text
+/data/kfk/Software/jdk-8u291-linux-x64.tar.gz filter=lfs diff=lfs merge=lfs -text
+/data/kfk/Software/prometheus-2.27.1.linux-amd64.tar.gz filter=lfs diff=lfs merge=lfs -text

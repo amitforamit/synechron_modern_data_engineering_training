@@ -1,0 +1,58 @@
+ProjectWork #: Customer Complaints Analysis
+The ProjectWork is based on Consumer Complains recorded by US government.
+These are complaints received from US citizens about financial products and services.
+Public DATASET available at below website
+https://catalog.data.gov/dataset/consumer-complaint-database
+Industry: Finance
+Data: Publicly available dataset with attributes like:
+Complaint ID, Product, Sub-product, Issue,Sub-issue, State, ZIP code, Submitted via, Date received, Date sent to company, Company, Company response, Timely response, Consumer disputed.
+Problem Statement: Analyze the data in Hadoop Eco-system to:
+1. Get the number of complaints filed for each company.
+2. Get the number of complaints filed under each product.
+3. Get the total number of complaints filed from a particular location
+4. Get the list of company grouped by location which has no timely response
+Input File Format - Comma Separated Values File (csv file)
+Attributed of Input file.
+1) Complaint ID, 2) Product, 3) Sub-product, 4) Issue, 5) Sub-issue, 6) State, 7) ZIP code, 8) Submitted via, 9) Date received, 10) Date sent to company, 11) Company, 12) Company response, 13) Timely response 14) Consumer disputed
+(Note: Original data contains some additional commas we need to remove those commas)
+Processing Logic – Customer Complaints data in Hadoop Eco-System
+
+Pig Script
+Pig Script purpose it to address the below Problem
+
+1. Get the number of complaints filed for each company.
+2. Get the number of complaints filed under each product.
+3. Get the total number of complaints filed from a particular location
+4. Get the list of company grouped by location which has no timely response
+
+Four Output files will be created.
+Pig Code
+Customer_Complain_Analysis.pig
+
+CUSTOMER_COMPLAIN = LOAD 'hdfs://200.bigdatacluster.org:8020/user/root/ProjectWork/Consumer_Complaints1.csv' using PigStorage(',') as (Complain_id:int, Product:chararray, Sub_Product:chararray, Issue:chararray, Sub_Issue:chararray, State:chararray, Zip:int, Submitted_via:chararray, Date_Received:chararray, Date_Sent_To_Company:chararray, Company:chararray, Company_Response:chararray, Timely_Responsesponse:chararray, Customer_Dispute:chararray); 
+
+GRP_COMPANY = GROUP CUSTOMER_COMPLAIN by Company;
+
+CNT_COMPANY = FOREACH GRP_COMPANY GENERATE group,COUNT(CUSTOMER_COMPLAIN);
+
+STORE CNT_COMPANY INTO 'hdfs://200.bigdatacluster.org:8020/user/root/ProjectWork/Complains_by_Company/' using PigStorage(',');
+
+GRP_PRODUCT = GROUP CUSTOMER_COMPLAIN by Product;
+
+CNT_PRODUCT = FOREACH GRP_PRODUCT GENERATE group,COUNT(CUSTOMER_COMPLAIN);
+
+STORE CNT_PRODUCT INTO 'hdfs://200.bigdatacluster.org:8020/user/root/ProjectWork/Complains_by_Product/' using PigStorage(',');
+
+GRP_LOCATION = GROUP CUSTOMER_COMPLAIN by State;
+
+CNT_LOCATION = FOREACH GRP_LOCATION GENERATE group,COUNT(CUSTOMER_COMPLAIN);
+
+STORE CNT_LOCATION INTO 'hdfs://200.bigdatacluster.org:8020/user/root/ProjectWork/Complains_by_Location/' using PigStorage(','); 
+
+FLTR_TIME_RESPONSE = FILTER CUSTOMER_COMPLAIN by Timely_Responsesponse=='No';
+
+GRP_COMPANY_LOCATION = GROUP FLTR_TIME_RESPONSE by State;
+
+COMPANY_AND_LOCATION = FOREACH GRP_COMPANY_LOCATION GENERATE group,FLATTEN(FLTR_TIME_RESPONSE.Company);
+
+STORE COMPANY_AND_LOCATION INTO 'hdfs://200.bigdatacluster.org:8020/user/root/ProjectWork/Complains_by_Response_No/' using PigStorage(',');

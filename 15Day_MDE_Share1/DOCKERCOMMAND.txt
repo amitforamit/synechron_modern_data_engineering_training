@@ -1,0 +1,2 @@
+docker run --user root -e HOME=/tmp -e SPARK_UI_PORT=8889 -p 8888:8888 -p 8889:8889 -v /home/prathamos/Downloads/Share1/jupyterbasedexamples/pyspark_startup.py:/usr/local/share/jupyter/kernels/pyspark4/startup.py -v /home/prathamos/Downloads/Share1/jupyterbasedexamples:/mnt/data minus1by12/sanatan:spark-lakehouse-driver-4.2.0-gravitino-1.3.0 jupyter-lab --ip=0.0.0.0 --port=8888 --notebook-dir=/mnt/data --no-browser --allow-root --ServerApp.disable_check_xsrf=True --LabApp.news_url='' --NotebookNotary.db_file=':memory:'
+

@@ -1,0 +1,11 @@
+order_id,customer_id,product,category,amount,order_date,order_year,order_month
+O001,C001,Laptop,Electronics,1200,2026-01-03,2026,01
+O002,C002,Phone,Electronics,800,2026-01-04,2026,01
+O003,C001,Desk,Furniture,450,2026-01-05,2026,01
+O004,C003,Monitor,Electronics,300,2026-01-06,2026,01
+O005,C004,Chair,Furniture,150,2026-02-07,2026,02
+O006,C005,Tablet,Electronics,650,2026-02-08,2026,02
+O007,C006,Lamp,Furniture,90,2026-02-09,2026,02
+O008,C007,Laptop,Electronics,1100,2026-03-10,2026,03
+O009,C008,Desk,Furniture,500,2026-03-11,2026,03
+O010,C009,Phone,Electronics,950,2026-03-12,2026,03

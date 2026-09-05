@@ -1,0 +1,14 @@
+<root>
+    <users>
+        <user>
+            <account>1234</account>
+            <name>name_1</name>
+            <number>34233</number>
+        </user>
+        <user>
+            <account>58789</account>
+            <name>name_2</name>
+            <number>54697</number>
+        </user>
+    </users>
+</root>

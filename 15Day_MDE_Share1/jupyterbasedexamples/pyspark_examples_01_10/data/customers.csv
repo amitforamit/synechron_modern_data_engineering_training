@@ -1,0 +1,11 @@
+customer_id,customer_name,city,segment
+C001,Alice,New York,Premium
+C002,Bob,Chicago,Standard
+C003,Carol,New York,Premium
+C004,David,Seattle,Standard
+C005,Eva,Boston,Premium
+C006,Frank,Chicago,Standard
+C007,Grace,Austin,Premium
+C008,Henry,Seattle,Standard
+C009,Ivy,Boston,Premium
+C010,Jack,Austin,Standard
